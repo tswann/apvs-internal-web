@@ -30,17 +30,15 @@ const VALID_DATA_APPROVE = {
   'claimExpenses': VALID_CLAIMEXPENSE_DATA
 }
 const VALID_DATA_ADD_DEDUCTION = {
-  'add-deduction': 'Submit',
   deductionType: deductionTypeEnum.HC3_DEDUCTION.value,
   deductionAmount: '1'
 }
 const VALID_DATA_DISABLE_DEDUCTION = {
-  'remove-deduction-1': 'Remove'
+  deductionId: '1'
 }
 const VALID_DATA_UPDATE_OVERPAYMENT_STATUS = {
   'overpayment-amount': '20',
-  'overpayment-reason': 'cos',
-  'closed-claim-action': 'OVERPAYMENT'
+  'overpayment-reason': 'cos'
 }
 const VALID_DATA_CLOSE_ADVANCE_CLAIM = {
   'closed-claim-action': 'CLOSE-ADVANCE-CLAIM',
@@ -189,14 +187,13 @@ describe('routes/claim/view-claim', function () {
       }
       stubGetClaimLastUpdated.resolves({})
       stubCheckLastUpdated.returns(false)
+      stubGetClaimExpenseResponses.returns({})
       stubGetIndividualClaimDetails.resolves(claimData)
-      stubClaimDecision.returns({})
-      stubInsertDeduction.throws(new ValidationError())
-      stubMergeClaimExpensesWithSubmittedResponses.returns({})
+      stubSubmitClaimResponse.throws(new ValidationError())
 
       return supertest(app)
         .post('/claim/123')
-        .send(VALID_DATA_ADD_DEDUCTION)
+        .send(VALID_DATA_APPROVE)
         .expect(400)
         .expect(function () {
           expect(authorisation.isCaseworker.calledOnce).to.be.true
@@ -205,7 +202,9 @@ describe('routes/claim/view-claim', function () {
           expect(stubGetIndividualClaimDetails.calledWith('123')).to.be.true
         })
     })
+  })
 
+  describe('POST /claim/:claimId/add-deduction', function () {
     it('should respond with 302 when valid data entered (add deduction)', function () {
       var testClaimDecisionObject = {deductionType: 'a', amount: '5'}
       stubGetClaimLastUpdated.resolves({})
@@ -214,21 +213,23 @@ describe('routes/claim/view-claim', function () {
       stubClaimDeduction.returns(testClaimDecisionObject)
 
       return supertest(app)
-        .post('/claim/123')
+        .post('/claim/123/add-deduction')
         .send(VALID_DATA_ADD_DEDUCTION)
         .expect(302)
         .expect(function () {
           expect(stubInsertDeduction.calledWith('123', testClaimDecisionObject)).to.be.true
         })
     })
+  })
 
+  describe('POST /claim/:claimId/remove-deduction', function () {
     it('should respond with 302 when valid data entered (disable deduction)', function () {
       stubGetClaimLastUpdated.resolves({})
       stubCheckLastUpdated.returns(false)
       stubDisableDeduction.resolves({})
 
       return supertest(app)
-        .post('/claim/123')
+        .post('/claim/123/remove-deduction')
         .send(VALID_DATA_DISABLE_DEDUCTION)
         .expect(302)
         .expect(function () {
@@ -257,7 +258,7 @@ describe('routes/claim/view-claim', function () {
     })
   })
 
-  describe('POST /claim/:claimId/close-claim-action', function () {
+  describe('POST /claim/:claimId/overpayment', function () {
     it('should respond with 302 when valid data entered (add overpayment)', function () {
       var claimData = { claim: { IsOverpaid: false } }
       var overpaymentResponse = {}
@@ -266,7 +267,7 @@ describe('routes/claim/view-claim', function () {
       stubUpdateClaimOverpaymentStatus.resolves()
 
       return supertest(app)
-        .post('/claim/123/closed-claim-action')
+        .post('/claim/123/overpayment')
         .send(VALID_DATA_UPDATE_OVERPAYMENT_STATUS)
         .expect(302)
         .expect(function () {
@@ -282,7 +283,7 @@ describe('routes/claim/view-claim', function () {
       stubUpdateClaimOverpaymentStatus.throws(new ValidationError())
 
       return supertest(app)
-        .post('/claim/123/closed-claim-action')
+        .post('/claim/123/overpayment')
         .send(VALID_DATA_UPDATE_OVERPAYMENT_STATUS)
         .expect(400)
         .expect(function () {
@@ -291,12 +292,14 @@ describe('routes/claim/view-claim', function () {
           expect(stubUpdateClaimOverpaymentStatus.calledOnce).to.be.true
         })
     })
+  })
 
+  describe('POST /claim/:claimId/close-advance-claim', function () {
     it('should respond with 302 when valid data entered (close advance claim)', function () {
       stubCloseAdvanceClaim.resolves()
 
       return supertest(app)
-        .post('/claim/123/closed-claim-action')
+        .post('/claim/123/close-advance-claim')
         .send(VALID_DATA_CLOSE_ADVANCE_CLAIM)
         .expect(302)
         .expect(function () {
@@ -309,7 +312,7 @@ describe('routes/claim/view-claim', function () {
       stubGetIndividualClaimDetails.resolves({})
 
       return supertest(app)
-        .post('/claim/123/closed-claim-action')
+        .post('/claim/123/close-advance-claim')
         .send(VALID_DATA_CLOSE_ADVANCE_CLAIM)
         .expect(function () {
           expect(stubGetIndividualClaimDetails.calledOnce).to.be.true
