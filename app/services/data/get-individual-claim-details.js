@@ -129,12 +129,16 @@ function getClaimExpenses (claimId) {
   return knex('Claim')
     .join('ClaimExpense', 'Claim.ClaimId', '=', 'ClaimExpense.ClaimId')
     .where('Claim.ClaimId', claimId)
-    .select('ClaimExpense.*', 'ClaimDocument.DocumentStatus', 'ClaimDocument.DocumentType', 'ClaimDocument.ClaimDocumentId', 'ClaimDocument.Filepath')
+    .select('ClaimExpense.*', 'ClaimDocument.DocumentStatus', 'ClaimDocument.DocumentType', 'ClaimDocument.ClaimDocumentId', 'ClaimDocument.Filepath', 'ClaimDocumentMetadata.IsText', 'ClaimDocumentMetadata.Description', 'ClaimDocumentMetadata.MatchingExpenseLine')
     .leftJoin('ClaimDocument', function () {
       this
         .on('ClaimExpense.ClaimId', 'ClaimDocument.ClaimId')
         .on('ClaimExpense.ClaimExpenseId', 'ClaimDocument.ClaimExpenseId')
         .on('ClaimExpense.IsEnabled', 'ClaimDocument.IsEnabled')
+    })
+    .leftJoin('ClaimDocumentMetadata', function () {
+      this
+        .on('ClaimDocument.ClaimDocumentId', 'ClaimDocumentMetadata.ClaimDocumentId')
     })
     .orderBy('ClaimExpense.ClaimExpenseId')
     .then(function (claimExpenses) {
